@@ -44,3 +44,4 @@ temp/
 output/
 *.tmp.xlsx
 
+.github/instructions/codacy.instructions.md

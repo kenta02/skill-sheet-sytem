@@ -1,0 +1,10 @@
+{
+  "name": "skill-sheet-system",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "type": "module",
+  "volta": {
+    "node": "24.20.0"
+  }
+}

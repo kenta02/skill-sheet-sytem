@@ -2,12 +2,151 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
-
+// NestJSから利用するTypeScript用のPrisma Clientを生成する設定。
 generator client {
+  // 生成に使用するPrisma Clientのプロバイダー。
   provider = "prisma-client"
+  // 生成されたPrisma Clientの出力先。
   output   = "../src/generated/prisma"
 }
 
+// アプリケーションが接続するデータベースの設定。
 datasource db {
+  // 接続先データベースにはPostgreSQLを使用する。
   provider = "postgresql"
+}
+
+// ユーザーの権限を表す区分。
+enum UserRole {
+  // すべての管理操作を実行できる管理者。
+  ADMIN
+  // 通常のアプリケーション利用者。
+  USER
+}
+
+// 案件経歴の進行状態を表す区分。
+enum CareerProjectStatus {
+  // 現在進行中の案件。
+  ACTIVE
+  // 終了した案件。
+  COMPLETED
+}
+
+// アプリケーションを利用するユーザーの認証・権限情報を管理するモデル。
+model User {
+  // ユーザーを一意に識別するUUID。
+  id              String    @id @default(uuid()) @db.Uuid
+  // ログインに使用するメールアドレス。重複は許可しない。
+  email           String    @unique @db.VarChar(255)
+  // ハッシュ化して保存するパスワード。
+  passwordHash    String    @map("password_hash") @db.VarChar(255)
+  // メールアドレスを検証した日時。未検証の場合はNULL。
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  // ユーザーの権限。指定がない場合は通常ユーザー。
+  role            UserRole  @default(USER)
+
+  // ユーザーに紐づくプロフィール。ユーザー1人につき1件。
+  profile Profile?
+
+  // レコードが作成された日時。
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  // レコードが最後に更新された日時。更新時に自動更新される。
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Prisma上のモデル名Userを、PostgreSQL上のusersテーブルに対応付ける。
+  @@map("users")
+}
+
+/// ユーザーのスキルシート用プロフィール。
+/// Userとは1対1で紐づく。
+model Profile {
+  // プロフィールを一意に識別するUUID。
+  id                     String   @id @default(uuid()) @db.Uuid
+  // 所有ユーザーのID。1ユーザーにつき1プロフィール。
+  userId                 String   @unique @map("user_id") @db.Uuid
+  // 姓。
+  familyName             String   @map("family_name") @db.VarChar(100)
+  // 名。
+  givenName              String   @map("given_name") @db.VarChar(100)
+  // 姓のローマ字表記。
+  familyNameRomaji       String   @map("family_name_romaji") @db.VarChar(100)
+  // 名のローマ字表記。
+  givenNameRomaji        String   @map("given_name_romaji") @db.VarChar(100)
+  // 生年月日。
+  birthDate              DateTime @map("birth_date") @db.Date
+  // 性別。未入力を許可する。
+  gender                 String?  @db.VarChar(50)
+  // 国籍。未入力を許可する。
+  nationality            String?  @db.VarChar(100)
+  // 最寄り駅。未入力を許可する。
+  nearestStation         String?  @map("nearest_station") @db.VarChar(255)
+  // 所属組織。未入力を許可する。
+  organization           String?  @db.VarChar(255)
+  // 役職。未入力を許可する。
+  position               String?  @db.VarChar(100)
+  // 学歴。未入力を許可する。
+  education              String?  @db.Text
+  // 自己PR。未入力を許可する。
+  selfPr                 String?  @map("self_pr") @db.Text
+  // 性格・人物像の説明。未入力を許可する。
+  personalityDescription String?  @map("personality_description") @db.Text
+  // 現在の学習状況。未入力を許可する。
+  learningStatus         String?  @map("learning_status") @db.Text
+  // 将来の目標。未入力を許可する。
+  futureGoal             String?  @map("future_goal") @db.Text
+  // このプロフィールを所有するユーザー。
+  user                   User     @relation(fields: [userId], references: [id])
+
+  // レコードが作成された日時。
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  // レコードが最後に更新された日時。更新時に自動更新される。
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // 1つのプロフィールに紐づく案件経歴の一覧。
+  careerProjects CareerProject[]
+
+  // Prisma上のモデル名Profileを、PostgreSQL上のprofilesテーブルに対応付ける。
+  @@map("profiles")
+}
+
+/// ユーザーの案件経歴を管理するモデル。
+/// Profileとは多対1で紐づく。
+model CareerProject {
+  // 案件経歴を一意に識別するUUID。
+  id             String              @id @default(uuid()) @db.Uuid
+  // 所属プロフィールのID。
+  profileId      String              @map("profile_id") @db.Uuid
+  // 案件名。
+  projectName    String              @map("project_name") @db.VarChar(255)
+  // クライアント名。未入力を許可する。
+  clientName     String?             @map("client_name") @db.VarChar(255)
+  // 案件の進行状態。
+  status         CareerProjectStatus
+  // 案件の開始月。
+  startMonth     DateTime            @map("start_month") @db.Date
+  // 案件の終了月。進行中の場合はNULL。
+  endMonth       DateTime?           @map("end_month") @db.Date
+  // 案件の概要。未入力を許可する。
+  summary        String?             @db.Text
+  // 担当業務・使用技術などの詳細。未入力を許可する。
+  details        String?             @db.Text
+  // 案件のチーム人数。未入力を許可する。
+  teamSize       Int?                @map("team_size")
+  // チーム構成。未入力を許可する。
+  teamStructure  String?             @map("team_structure") @db.Text
+  // 商流。未入力を許可する。
+  commercialFlow String?             @map("commercial_flow") @db.Text
+
+  // この案件経歴が属するプロフィール。
+  profile Profile @relation(fields: [profileId], references: [id])
+
+  // レコードが作成された日時。
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  // レコードが最後に更新された日時。更新時に自動更新される。
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // プロフィールごとの開始月順検索を高速化する複合インデックス。
+  @@index([profileId, startMonth])
+  // Prisma上のモデル名CareerProjectを、PostgreSQL上のcareer_projectsテーブルに対応付ける。
+  @@map("career_projects")
 }

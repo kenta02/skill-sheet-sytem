@@ -53,3 +53,4 @@ output/
 *.tmp.xlsx
 
 .github/instructions/codacy.instructions.md
+.vscode/settings.json

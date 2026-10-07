@@ -28,14 +28,14 @@ export class PrismaService
   /**
    * NestJS起動時にPostgreSQLへ接続する。
    */
-  async onModuleInit() {
+  async onModuleInit(): Promise<void> {
     await this.$connect();
   }
 
   /**
    * NestJS終了時にPostgreSQLとの接続を切断する。
    */
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
   }
 }
